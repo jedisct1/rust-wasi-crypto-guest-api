@@ -1,8 +1,9 @@
 [package]
-name = "capi"
+name = "wasi-crypto-guest"
 version = "0.1.0"
 authors = ["Frank Denis <github@pureftpd.org>"]
 edition = "2018"
 
 [dependencies]
-wiggle = "0.18"
+num_enum = "0.5"
+wiggle = "0.19"

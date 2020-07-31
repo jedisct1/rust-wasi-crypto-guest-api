@@ -179,10 +179,12 @@ pub type SymmetricTag = u32;
 pub type OptOptionsU = u8;
 pub const OPT_OPTIONS_U_SOME: OptOptionsU = 0;
 pub const OPT_OPTIONS_U_NONE: OptOptionsU = 1;
+
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub union OptOptionsUnion {
     pub some: Options,
+    pub none: bool,
 }
 #[repr(C)]
 #[derive(Copy, Clone)]
@@ -198,6 +200,7 @@ pub const OPT_SYMMETRIC_KEY_U_NONE: OptSymmetricKeyU = 1;
 #[derive(Copy, Clone)]
 pub union OptSymmetricKeyUnion {
     pub some: SymmetricKey,
+    pub none: bool,
 }
 #[repr(C)]
 #[derive(Copy, Clone)]
