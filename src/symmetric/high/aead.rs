@@ -36,12 +36,7 @@ pub struct Aead {
 }
 
 impl Aead {
-    pub fn new(
-        alg: &'static str,
-        key: &AeadKey,
-        nonce: Option<&[u8]>,
-        ad: Option<&[u8]>,
-    ) -> Result<Self, Error> {
+    pub fn new(key: &AeadKey, nonce: Option<&[u8]>, ad: Option<&[u8]>) -> Result<Self, Error> {
         let options = if let Some(nonce) = nonce {
             let mut options = SymmetricOptions::new();
             options.set("nonce", nonce)?;
@@ -49,7 +44,7 @@ impl Aead {
         } else {
             None
         };
-        let mut state = SymmetricState::new(alg, Some(key), options.as_ref())?;
+        let mut state = SymmetricState::new(key.alg, Some(key), options.as_ref())?;
         if let Some(ad) = ad {
             state.absorb(ad)?;
         }

@@ -36,8 +36,8 @@ pub struct Auth {
 }
 
 impl Auth {
-    pub fn new(alg: &'static str, key: &AuthKey) -> Result<Self, Error> {
-        let state = SymmetricState::new(alg, Some(&key), None)?;
+    pub fn new(key: &AuthKey) -> Result<Self, Error> {
+        let state = SymmetricState::new(key.alg, Some(&key), None)?;
         Ok(Auth { state })
     }
 
@@ -53,23 +53,18 @@ impl Auth {
         self.state.verify(raw_tag)
     }
 
-    pub fn auth(
-        alg: &'static str,
-        data: impl AsRef<[u8]>,
-        key: &AuthKey,
-    ) -> Result<Vec<u8>, Error> {
-        let mut state = Auth::new(alg, key)?;
+    pub fn auth(data: impl AsRef<[u8]>, key: &AuthKey) -> Result<Vec<u8>, Error> {
+        let mut state = Auth::new(key)?;
         state.absorb(data)?;
         state.tag()
     }
 
     pub fn auth_verify(
-        alg: &'static str,
         data: impl AsRef<[u8]>,
         key: &AuthKey,
         raw_tag: impl AsRef<[u8]>,
     ) -> Result<(), Error> {
-        let mut state = Auth::new(alg, key)?;
+        let mut state = Auth::new(key)?;
         state.absorb(data)?;
         state.tag_verify(raw_tag)
     }

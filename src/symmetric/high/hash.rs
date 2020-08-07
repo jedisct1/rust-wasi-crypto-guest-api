@@ -36,8 +36,8 @@ pub struct Hash {
 }
 
 impl Hash {
-    pub fn keyed(alg: &'static str, key: &HashKey) -> Result<Self, Error> {
-        let state = SymmetricState::new(alg, Some(key), None)?;
+    pub fn keyed(key: &HashKey) -> Result<Self, Error> {
+        let state = SymmetricState::new(key.alg, Some(key), None)?;
         Ok(Hash { state })
     }
 
@@ -61,7 +61,7 @@ impl Hash {
         key: Option<&HashKey>,
     ) -> Result<Vec<u8>, Error> {
         let mut state = if let Some(key) = key {
-            Hash::keyed(alg, key)
+            Hash::keyed(key)
         } else {
             Hash::unkeyed(alg)
         }?;
