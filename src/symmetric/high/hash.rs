@@ -1,18 +1,41 @@
+use std::ops::Deref;
+
 use super::low::*;
 use crate::error::*;
 
-pub type HashKey = SymmetricKey;
+#[derive(Debug)]
+pub struct HashKey(SymmetricKey);
+
+impl Deref for HashKey {
+    type Target = SymmetricKey;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl From<SymmetricKey> for HashKey {
+    fn from(symmetric_key: SymmetricKey) -> Self {
+        Self(symmetric_key)
+    }
+}
+
+impl HashKey {
+    pub fn generate(alg: &'static str) -> Result<Self, Error> {
+        SymmetricKey::generate(alg, None).map(Self)
+    }
+
+    pub fn from_raw(alg: &'static str, encoded: impl AsRef<[u8]>) -> Result<Self, Error> {
+        SymmetricKey::from_raw(alg, encoded).map(Self)
+    }
+}
+
 #[derive(Debug)]
 pub struct Hash {
     state: SymmetricState,
 }
 
 impl Hash {
-    pub fn keygen(alg: &'static str) -> Result<Vec<u8>, Error> {
-        let symmetric_key = SymmetricKey::generate(alg, None)?;
-        symmetric_key.raw()
-    }
-
     pub fn keyed(alg: &'static str, key: &HashKey) -> Result<Self, Error> {
         let state = SymmetricState::new(alg, Some(key), None)?;
         Ok(Hash { state })

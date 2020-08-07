@@ -62,7 +62,7 @@ mod test {
 
     #[test]
     fn test_symmetric_auth() -> Result<(), WasiCryptoError> {
-        let key = Auth::keygen("HMAC/SHA-512")?;
+        let key = AuthKey::generate("HMAC/SHA-512")?;
         let tag = Auth::auth("HMAC/SHA-512", "test", &key)?;
         Auth::auth_verify("HMAC/SHA-512", "test", &key, tag)?;
         Ok(())
@@ -70,7 +70,7 @@ mod test {
 
     #[test]
     fn test_symmetric_hkdf() -> Result<(), WasiCryptoError> {
-        let key = Hkdf::keygen("HKDF-EXTRACT/SHA-512")?;
+        let key = HkdfKey::generate("HKDF-EXTRACT/SHA-512")?;
         let prk = Hkdf::new(
             "HKDF-EXTRACT/SHA-512",
             "HKDF-EXPAND/SHA-512",
@@ -84,7 +84,7 @@ mod test {
 
     #[test]
     fn test_symmetric_aead() -> Result<(), WasiCryptoError> {
-        let key = Aead::keygen("AES-128-GCM")?;
+        let key = AeadKey::generate("AES-128-GCM")?;
         let nonce = [0u8; 12];
         let mut aead = Aead::new("AES-128-GCM", &key, Some(&nonce), Some(b"ad"))?;
         let ct = aead.encrypt("test")?;

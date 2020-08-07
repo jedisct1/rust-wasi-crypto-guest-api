@@ -1,7 +1,34 @@
+use std::ops::Deref;
+
 use super::low::*;
 use crate::error::*;
 
-pub type AuthKey = SymmetricKey;
+#[derive(Debug)]
+pub struct AuthKey(SymmetricKey);
+
+impl Deref for AuthKey {
+    type Target = SymmetricKey;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl From<SymmetricKey> for AuthKey {
+    fn from(symmetric_key: SymmetricKey) -> Self {
+        Self(symmetric_key)
+    }
+}
+
+impl AuthKey {
+    pub fn generate(alg: &'static str) -> Result<Self, Error> {
+        SymmetricKey::generate(alg, None).map(Self)
+    }
+
+    pub fn from_raw(alg: &'static str, encoded: impl AsRef<[u8]>) -> Result<Self, Error> {
+        SymmetricKey::from_raw(alg, encoded).map(Self)
+    }
+}
 
 #[derive(Debug)]
 pub struct Auth {
@@ -9,10 +36,6 @@ pub struct Auth {
 }
 
 impl Auth {
-    pub fn keygen(alg: &'static str) -> Result<AuthKey, Error> {
-        SymmetricKey::generate(alg, None)
-    }
-
     pub fn new(alg: &'static str, key: &AuthKey) -> Result<Self, Error> {
         let state = SymmetricState::new(alg, Some(&key), None)?;
         Ok(Auth { state })

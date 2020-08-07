@@ -1,7 +1,34 @@
+use std::ops::Deref;
+
 use super::low::*;
 use crate::error::*;
 
-pub type AeadKey = SymmetricKey;
+#[derive(Debug)]
+pub struct AeadKey(SymmetricKey);
+
+impl Deref for AeadKey {
+    type Target = SymmetricKey;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl From<SymmetricKey> for AeadKey {
+    fn from(symmetric_key: SymmetricKey) -> Self {
+        Self(symmetric_key)
+    }
+}
+
+impl AeadKey {
+    pub fn generate(alg: &'static str) -> Result<Self, Error> {
+        SymmetricKey::generate(alg, None).map(Self)
+    }
+
+    pub fn from_raw(alg: &'static str, encoded: impl AsRef<[u8]>) -> Result<Self, Error> {
+        SymmetricKey::from_raw(alg, encoded).map(Self)
+    }
+}
 
 #[derive(Debug)]
 pub struct Aead {
@@ -9,10 +36,6 @@ pub struct Aead {
 }
 
 impl Aead {
-    pub fn keygen(alg: &'static str) -> Result<AeadKey, Error> {
-        SymmetricKey::generate(alg, None)
-    }
-
     pub fn new(
         alg: &'static str,
         key: &AeadKey,

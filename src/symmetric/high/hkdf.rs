@@ -1,8 +1,57 @@
+use std::ops::Deref;
+
 use super::low::*;
 use crate::error::*;
 
-type HkdfKey = SymmetricKey;
-type HkdfPrk = SymmetricKey;
+#[derive(Debug)]
+pub struct HkdfKey(SymmetricKey);
+
+impl Deref for HkdfKey {
+    type Target = SymmetricKey;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl From<SymmetricKey> for HkdfKey {
+    fn from(symmetric_key: SymmetricKey) -> Self {
+        Self(symmetric_key)
+    }
+}
+
+impl HkdfKey {
+    pub fn generate(alg: &'static str) -> Result<Self, Error> {
+        SymmetricKey::generate(alg, None).map(Self)
+    }
+
+    pub fn from_raw(alg: &'static str, encoded: impl AsRef<[u8]>) -> Result<Self, Error> {
+        SymmetricKey::from_raw(alg, encoded).map(Self)
+    }
+}
+
+#[derive(Debug)]
+pub struct HkdfPrk(SymmetricKey);
+
+impl Deref for HkdfPrk {
+    type Target = SymmetricKey;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl From<SymmetricKey> for HkdfPrk {
+    fn from(symmetric_key: SymmetricKey) -> Self {
+        Self(symmetric_key)
+    }
+}
+
+impl HkdfPrk {
+    pub fn from_raw(alg: &'static str, encoded: impl AsRef<[u8]>) -> Result<Self, Error> {
+        SymmetricKey::from_raw(alg, encoded).map(Self)
+    }
+}
 
 #[derive(Debug)]
 pub struct Hkdf {
@@ -11,10 +60,6 @@ pub struct Hkdf {
 }
 
 impl Hkdf {
-    pub fn keygen(prk_alg: &'static str) -> Result<HkdfPrk, Error> {
-        SymmetricKey::generate(prk_alg, None)
-    }
-
     pub fn new(
         prk_alg: &'static str,
         exp_alg: &'static str,
@@ -26,7 +71,7 @@ impl Hkdf {
         if let Some(salt) = salt {
             state.absorb(salt)?;
         };
-        let prk = state.squeeze_key(exp_alg)?;
+        let prk = state.squeeze_key(exp_alg).map(HkdfPrk)?;
         Ok(Hkdf { prk, exp_alg })
     }
 
