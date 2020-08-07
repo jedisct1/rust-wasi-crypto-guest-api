@@ -1,5 +1,3 @@
-use std::borrow::Cow;
-
 use crate::common::*;
 use crate::error::*;
 use crate::raw;
@@ -7,7 +5,7 @@ use crate::raw;
 #[derive(Debug)]
 pub(crate) struct PublicKey {
     pub handle: raw::Publickey,
-    pub alg: Cow<'static, str>,
+    pub alg: &'static str,
 }
 
 impl Drop for PublicKey {
@@ -27,10 +25,7 @@ impl PublicKey {
         let handle = unsafe {
             raw::publickey_import(alg_type, alg, encoded.as_ptr(), encoded.len(), encoding)
         }?;
-        Ok(PublicKey {
-            handle,
-            alg: Cow::Borrowed(alg),
-        })
+        Ok(PublicKey { handle, alg })
     }
 
     pub fn from_raw(

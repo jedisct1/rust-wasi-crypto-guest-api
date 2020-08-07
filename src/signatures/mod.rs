@@ -8,12 +8,11 @@ pub use state::*;
 use crate::common::*;
 use crate::error::*;
 use crate::raw;
-use std::borrow::Cow;
 
 #[derive(Debug)]
 pub struct Signature {
     pub(crate) handle: raw::Signature,
-    pub alg: Cow<'static, str>,
+    pub alg: &'static str,
 }
 
 impl Drop for Signature {
@@ -31,10 +30,7 @@ impl Signature {
         let encoded = encoded.as_ref();
         let handle =
             unsafe { raw::signature_import(alg, encoding, encoded.as_ptr(), encoded.len()) }?;
-        Ok(Signature {
-            handle,
-            alg: Cow::Borrowed(alg),
-        })
+        Ok(Signature { handle, alg })
     }
 
     pub fn from_raw(alg: &'static str, encoded: impl AsRef<[u8]>) -> Result<Self, Error> {

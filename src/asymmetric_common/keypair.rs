@@ -1,5 +1,3 @@
-use std::borrow::Cow;
-
 use super::publickey::*;
 use crate::common::*;
 use crate::error::*;
@@ -8,7 +6,7 @@ use crate::raw;
 #[derive(Debug)]
 pub(crate) struct KeyPair {
     pub handle: raw::Keypair,
-    pub alg: Cow<'static, str>,
+    pub alg: &'static str,
 }
 
 impl Drop for KeyPair {
@@ -20,17 +18,14 @@ impl Drop for KeyPair {
 impl KeyPair {
     pub fn generate(alg_type: raw::AlgorithmType, alg: &'static str) -> Result<Self, Error> {
         let handle = unsafe { raw::keypair_generate(alg_type, alg, &OptOptions::none()) }?;
-        Ok(KeyPair {
-            handle,
-            alg: Cow::Borrowed(alg),
-        })
+        Ok(KeyPair { handle, alg })
     }
 
     pub fn publickey(&self) -> Result<PublicKey, Error> {
         let handle = unsafe { raw::keypair_publickey(self.handle)? };
         Ok(PublicKey {
             handle,
-            alg: self.alg.clone(),
+            alg: self.alg,
         })
     }
 
@@ -44,10 +39,7 @@ impl KeyPair {
         let handle = unsafe {
             raw::keypair_import(alg_type, alg, encoded.as_ptr(), encoded.len(), encoding)
         }?;
-        Ok(KeyPair {
-            handle,
-            alg: Cow::Borrowed(alg),
-        })
+        Ok(KeyPair { handle, alg })
     }
 
     pub fn from_raw(

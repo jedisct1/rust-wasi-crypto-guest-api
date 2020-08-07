@@ -1,5 +1,3 @@
-use std::borrow::Cow;
-
 use super::{OptSymmetricKey, SymmetricKey, SymmetricOptions, Tag};
 use crate::common::*;
 use crate::error::*;
@@ -141,7 +139,7 @@ impl SymmetricState {
             unsafe { raw::symmetric_state_squeeze_key(self.handle, target_alg) }?;
         let symmetric_key = SymmetricKey {
             handle: symmetric_key_handle,
-            alg: Cow::Borrowed(target_alg),
+            alg: target_alg,
         };
         Ok(symmetric_key)
     }

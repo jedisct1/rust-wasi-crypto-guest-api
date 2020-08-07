@@ -1,8 +1,6 @@
 mod state;
 pub use state::*;
 
-use std::borrow::Cow;
-
 use crate::common::*;
 use crate::error::*;
 use crate::raw;
@@ -54,7 +52,7 @@ impl OptSymmetricKey {
 #[derive(Debug)]
 pub struct SymmetricKey {
     pub(crate) handle: raw::SymmetricKey,
-    pub alg: Cow<'static, str>,
+    pub alg: &'static str,
 }
 
 impl SymmetricKey {
@@ -68,19 +66,13 @@ impl SymmetricKey {
             OptOptions::none()
         };
         let handle = unsafe { raw::symmetric_key_generate(alg, &opt_options) }?;
-        Ok(SymmetricKey {
-            handle,
-            alg: Cow::Borrowed(alg),
-        })
+        Ok(SymmetricKey { handle, alg })
     }
 
     pub fn from_raw(alg: &'static str, encoded: impl AsRef<[u8]>) -> Result<Self, Error> {
         let encoded = encoded.as_ref();
         let handle = unsafe { raw::symmetric_key_import(alg, encoded.as_ptr(), encoded.len()) }?;
-        Ok(SymmetricKey {
-            handle,
-            alg: Cow::Borrowed(alg),
-        })
+        Ok(SymmetricKey { handle, alg })
     }
 
     pub fn raw(&self) -> Result<Vec<u8>, Error> {

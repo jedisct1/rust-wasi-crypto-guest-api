@@ -1,5 +1,3 @@
-use std::borrow::Cow;
-
 use super::Signature;
 use crate::error::*;
 use crate::raw;
@@ -7,7 +5,7 @@ use crate::raw;
 #[derive(Debug)]
 pub struct SignatureState {
     pub(crate) handle: raw::SignatureState,
-    pub alg: Cow<'static, str>,
+    pub alg: &'static str,
 }
 
 impl Drop for SignatureState {
@@ -26,7 +24,7 @@ impl SignatureState {
         let handle = unsafe { raw::signature_state_sign(self.handle) }?;
         Ok(Signature {
             handle,
-            alg: self.alg.clone(),
+            alg: self.alg,
         })
     }
 }
@@ -34,7 +32,7 @@ impl SignatureState {
 #[derive(Debug)]
 pub struct SignatureVerificationState {
     pub(crate) handle: raw::SignatureVerificationState,
-    pub alg: Cow<'static, str>,
+    pub alg: &'static str,
 }
 
 impl Drop for SignatureVerificationState {

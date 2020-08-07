@@ -71,7 +71,7 @@ impl SignatureKeyPair {
         let handle = unsafe { raw::signature_state_open(self.0.handle) }?;
         Ok(SignatureState {
             handle,
-            alg: self.0.alg.clone(),
+            alg: self.0.alg,
         })
     }
 
