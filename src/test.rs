@@ -74,7 +74,7 @@ mod test {
         let prk = Hkdf::new(
             "HKDF-EXTRACT/SHA-512",
             "HKDF-EXPAND/SHA-512",
-            key,
+            &key,
             Some(b"salt"),
         )?;
         let derived_key = prk.expand("info", 100)?;

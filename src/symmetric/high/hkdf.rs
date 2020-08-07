@@ -1,28 +1,28 @@
 use super::low::*;
 use crate::error::*;
 
+type HkdfKey = SymmetricKey;
+type HkdfPrk = SymmetricKey;
+
 #[derive(Debug)]
 pub struct Hkdf {
-    prk: SymmetricKey,
+    prk: HkdfPrk,
     exp_alg: &'static str,
 }
 
 impl Hkdf {
-    pub fn keygen(prk_alg: &'static str) -> Result<Vec<u8>, Error> {
-        let symmetric_key = SymmetricKey::generate(prk_alg, None)?;
-        symmetric_key.raw()
+    pub fn keygen(prk_alg: &'static str) -> Result<HkdfPrk, Error> {
+        SymmetricKey::generate(prk_alg, None)
     }
 
     pub fn new(
         prk_alg: &'static str,
         exp_alg: &'static str,
-        raw_key: impl AsRef<[u8]>,
+        key: &HkdfKey,
         salt: Option<&[u8]>,
     ) -> Result<Self, Error> {
-        let raw_key = raw_key.as_ref();
         let salt = salt.as_ref().map(|x| x.as_ref());
-        let symmetric_key = SymmetricKey::from_raw(prk_alg, raw_key)?;
-        let mut state = SymmetricState::new(prk_alg, Some(&symmetric_key), None)?;
+        let mut state = SymmetricState::new(prk_alg, Some(&key), None)?;
         if let Some(salt) = salt {
             state.absorb(salt)?;
         };

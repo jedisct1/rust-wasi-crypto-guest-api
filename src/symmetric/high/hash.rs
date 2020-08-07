@@ -1,10 +1,10 @@
 use super::low::*;
 use crate::error::*;
 
+pub type HashKey = SymmetricKey;
 #[derive(Debug)]
 pub struct Hash {
     state: SymmetricState,
-    symmetric_key: Option<SymmetricKey>,
 }
 
 impl Hash {
@@ -13,22 +13,14 @@ impl Hash {
         symmetric_key.raw()
     }
 
-    pub fn keyed(alg: &'static str, raw_key: impl AsRef<[u8]>) -> Result<Self, Error> {
-        let raw_key = raw_key.as_ref();
-        let symmetric_key = SymmetricKey::from_raw(alg, raw_key)?;
-        let state = SymmetricState::new(alg, Some(&symmetric_key), None)?;
-        Ok(Hash {
-            state,
-            symmetric_key: Some(symmetric_key),
-        })
+    pub fn keyed(alg: &'static str, key: &HashKey) -> Result<Self, Error> {
+        let state = SymmetricState::new(alg, Some(key), None)?;
+        Ok(Hash { state })
     }
 
     pub fn unkeyed(alg: &'static str) -> Result<Self, Error> {
         let state = SymmetricState::new(alg, None, None)?;
-        Ok(Hash {
-            state,
-            symmetric_key: None,
-        })
+        Ok(Hash { state })
     }
 
     pub fn absorb(&mut self, data: impl AsRef<[u8]>) -> Result<(), Error> {
@@ -43,10 +35,10 @@ impl Hash {
         alg: &'static str,
         data: impl AsRef<[u8]>,
         out_len: usize,
-        raw_key: Option<&[u8]>,
+        key: Option<&HashKey>,
     ) -> Result<Vec<u8>, Error> {
-        let mut state = if let Some(raw_key) = raw_key {
-            Hash::keyed(alg, raw_key)
+        let mut state = if let Some(key) = key {
+            Hash::keyed(alg, key)
         } else {
             Hash::unkeyed(alg)
         }?;

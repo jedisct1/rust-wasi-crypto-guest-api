@@ -1,26 +1,21 @@
 use super::low::*;
 use crate::error::*;
 
+pub type AuthKey = SymmetricKey;
+
 #[derive(Debug)]
 pub struct Auth {
     state: SymmetricState,
-    symmetric_key: Option<SymmetricKey>,
 }
 
 impl Auth {
-    pub fn keygen(alg: &'static str) -> Result<Vec<u8>, Error> {
-        let symmetric_key = SymmetricKey::generate(alg, None)?;
-        symmetric_key.raw()
+    pub fn keygen(alg: &'static str) -> Result<AuthKey, Error> {
+        SymmetricKey::generate(alg, None)
     }
 
-    pub fn new(alg: &'static str, raw_key: impl AsRef<[u8]>) -> Result<Self, Error> {
-        let raw_key = raw_key.as_ref();
-        let symmetric_key = SymmetricKey::from_raw(alg, raw_key)?;
-        let state = SymmetricState::new(alg, Some(&symmetric_key), None)?;
-        Ok(Auth {
-            state,
-            symmetric_key: Some(symmetric_key),
-        })
+    pub fn new(alg: &'static str, key: &AuthKey) -> Result<Self, Error> {
+        let state = SymmetricState::new(alg, Some(&key), None)?;
+        Ok(Auth { state })
     }
 
     pub fn absorb(&mut self, data: impl AsRef<[u8]>) -> Result<(), Error> {
@@ -38,9 +33,9 @@ impl Auth {
     pub fn auth(
         alg: &'static str,
         data: impl AsRef<[u8]>,
-        raw_key: impl AsRef<[u8]>,
+        key: &AuthKey,
     ) -> Result<Vec<u8>, Error> {
-        let mut state = Auth::new(alg, raw_key)?;
+        let mut state = Auth::new(alg, key)?;
         state.absorb(data)?;
         state.tag()
     }
@@ -48,10 +43,10 @@ impl Auth {
     pub fn auth_verify(
         alg: &'static str,
         data: impl AsRef<[u8]>,
-        raw_key: impl AsRef<[u8]>,
+        key: &AuthKey,
         raw_tag: impl AsRef<[u8]>,
     ) -> Result<(), Error> {
-        let mut state = Auth::new(alg, raw_key)?;
+        let mut state = Auth::new(alg, key)?;
         state.absorb(data)?;
         state.tag_verify(raw_tag)
     }
