@@ -1228,17 +1228,17 @@ pub unsafe fn signature_export(
 /// ```
 pub unsafe fn signature_import(
     algorithm: &str,
-    encoding: SignatureEncoding,
     encoded: *const u8,
     encoded_len: Size,
+    encoding: SignatureEncoding,
 ) -> Result<Signature> {
     let mut signature = MaybeUninit::uninit();
     let rc = wasi_ephemeral_crypto_signatures::signature_import(
         algorithm.as_ptr(),
         algorithm.len(),
-        encoding,
         encoded,
         encoded_len,
+        encoding,
         signature.as_mut_ptr(),
     );
     if let Some(err) = Error::from_raw_error(rc) {
@@ -1437,9 +1437,9 @@ pub mod wasi_ephemeral_crypto_signatures {
         pub fn signature_import(
             algorithm_ptr: *const u8,
             algorithm_len: usize,
-            encoding: SignatureEncoding,
             encoded: *const u8,
             encoded_len: Size,
+            encoding: SignatureEncoding,
             signature: *mut Signature,
         ) -> CryptoErrno;
         /// Create a new state to collect data to compute a signature on.
