@@ -211,6 +211,10 @@ pub struct OptSymmetricKey {
 
 pub type SignatureKeypair = Keypair;
 pub type SignaturePublickey = Publickey;
+pub type SignatureSecretkey = Secretkey;
+pub type KxKeypair = Keypair;
+pub type KxPublickey = Publickey;
+pub type KxSecretkey = Secretkey;
 /// Create a new object to set non-default options.
 ///
 /// Example usage:
@@ -1648,16 +1652,16 @@ pub unsafe fn symmetric_key_generate_managed(
 ///
 /// It does several things:
 ///
-/// - The key identifier for `$kp_new` is set to the one of `$kp_old`.
+/// - The key identifier for `$symmetric_key_new` is set to the one of `$symmetric_key_old`.
 /// - A new, unique version identifier is assigned to `$kp_new`. This version will be equivalent to using `$version_latest` until the key is replaced.
-/// - The `$kp_old` handle is closed.
+/// - The `$symmetric_key_old` handle is closed.
 ///
 /// Both keys must share the same algorithm and have compatible parameters. If this is not the case, `incompatible_keys` is returned.
 ///
 /// The function may also return the `unsupported_feature` error code if key management facilities are not supported by the host,
 /// or if keys cannot be rotated.
 ///
-/// Finally, `prohibited_operation` can be returned if `$kp_new` wasn't created by the key manager, and the key manager prohibits imported keys.
+/// Finally, `prohibited_operation` can be returned if `$symmetric_key_new` wasn't created by the key manager, and the key manager prohibits imported keys.
 ///
 /// If the operation succeeded, the new version is returned.
 ///
@@ -2148,7 +2152,7 @@ pub unsafe fn symmetric_state_encrypt(
 /// Encrypt data, with a detached tag.
 ///
 /// - **Stream cipher:** returns `invalid_operation` since stream ciphers do not include authentication tags.
-/// - **AEAD:** encrypts `data` into `out` and returns the tag separately. Additional data must have been previously absorbed using `symmetric_state_absorb()`. The output and input buffers can be of the same length.
+/// - **AEAD:** encrypts `data` into `out` and returns the tag separately. Additional data must have been previously absorbed using `symmetric_state_absorb()`. The output and input buffers must be of the same length.
 /// - **SHOE, Xoodyak, Strobe:** encrypts data and squeezes a tag.
 ///
 /// If `out` and `data` are the same address, encryption may happen in-place.
@@ -2219,7 +2223,8 @@ pub unsafe fn symmetric_state_decrypt(
 ///
 /// `raw_tag` is the expected tag, as raw bytes.
 ///
-/// If `out` and `data` are the same address, decryption may happen in-place.
+/// `out` and `data` be must have the same length.
+/// If they also share the same address, decryption may happen in-place.
 ///
 /// The function returns the actual size of the decrypted message.
 ///
@@ -2426,16 +2431,16 @@ pub mod wasi_ephemeral_crypto_symmetric {
         ///
         /// It does several things:
         ///
-        /// - The key identifier for `$kp_new` is set to the one of `$kp_old`.
+        /// - The key identifier for `$symmetric_key_new` is set to the one of `$symmetric_key_old`.
         /// - A new, unique version identifier is assigned to `$kp_new`. This version will be equivalent to using `$version_latest` until the key is replaced.
-        /// - The `$kp_old` handle is closed.
+        /// - The `$symmetric_key_old` handle is closed.
         ///
         /// Both keys must share the same algorithm and have compatible parameters. If this is not the case, `incompatible_keys` is returned.
         ///
         /// The function may also return the `unsupported_feature` error code if key management facilities are not supported by the host,
         /// or if keys cannot be rotated.
         ///
-        /// Finally, `prohibited_operation` can be returned if `$kp_new` wasn't created by the key manager, and the key manager prohibits imported keys.
+        /// Finally, `prohibited_operation` can be returned if `$symmetric_key_new` wasn't created by the key manager, and the key manager prohibits imported keys.
         ///
         /// If the operation succeeded, the new version is returned.
         ///
@@ -2780,7 +2785,7 @@ pub mod wasi_ephemeral_crypto_symmetric {
         /// Encrypt data, with a detached tag.
         ///
         /// - **Stream cipher:** returns `invalid_operation` since stream ciphers do not include authentication tags.
-        /// - **AEAD:** encrypts `data` into `out` and returns the tag separately. Additional data must have been previously absorbed using `symmetric_state_absorb()`. The output and input buffers can be of the same length.
+        /// - **AEAD:** encrypts `data` into `out` and returns the tag separately. Additional data must have been previously absorbed using `symmetric_state_absorb()`. The output and input buffers must be of the same length.
         /// - **SHOE, Xoodyak, Strobe:** encrypts data and squeezes a tag.
         ///
         /// If `out` and `data` are the same address, encryption may happen in-place.
@@ -2821,7 +2826,8 @@ pub mod wasi_ephemeral_crypto_symmetric {
         ///
         /// `raw_tag` is the expected tag, as raw bytes.
         ///
-        /// If `out` and `data` are the same address, decryption may happen in-place.
+        /// `out` and `data` be must have the same length.
+        /// If they also share the same address, decryption may happen in-place.
         ///
         /// The function returns the actual size of the decrypted message.
         ///
@@ -2894,5 +2900,99 @@ pub mod wasi_ephemeral_crypto_symmetric {
         ///
         /// Objects are reference counted. It is safe to close an object immediately after the last function needing it is called.
         pub fn symmetric_tag_close(symmetric_tag: SymmetricTag) -> CryptoErrno;
+    }
+}
+/// Perform a simple Diffie-Hellman key exchange.
+///
+/// Both keys must be of the same type, or else the `$crypto_errno.incompatible_keys` error is returned.
+/// The algorithm also has to support this kind of key exchange. If this is not the case, the `$crypto_errno.invalid_operation` error is returned.
+///
+/// Otherwide, a raw shared key is returned, and can be imported as a symmetric key.
+/// ```
+pub unsafe fn kx_dh(pk: Publickey, sk: Secretkey) -> Result<ArrayOutput> {
+    let mut shared_secret = MaybeUninit::uninit();
+    let rc = wasi_ephemeral_crypto_kx::kx_dh(pk, sk, shared_secret.as_mut_ptr());
+    if let Some(err) = Error::from_raw_error(rc) {
+        Err(err)
+    } else {
+        Ok(shared_secret.assume_init())
+    }
+}
+
+/// Create a shared secret and encrypt it for the given public key.
+///
+/// This operation is only compatible with specific algorithms.
+/// If a selected algorithm doesn't support it, `$crypto_errno.invalid_operation` is returned.
+///
+/// On success, both the shared secret and its encrypted version are returned.
+pub unsafe fn kx_encapsulate(pk: Publickey) -> Result<(ArrayOutput, ArrayOutput)> {
+    let mut secret = MaybeUninit::uninit();
+    let mut encapsulated_secret = MaybeUninit::uninit();
+    let rc = wasi_ephemeral_crypto_kx::kx_encapsulate(
+        pk,
+        secret.as_mut_ptr(),
+        encapsulated_secret.as_mut_ptr(),
+    );
+    if let Some(err) = Error::from_raw_error(rc) {
+        Err(err)
+    } else {
+        Ok((secret.assume_init(), encapsulated_secret.assume_init()))
+    }
+}
+
+/// Decapsulate an encapsulated secret crated with `kx_encapsulate`
+///
+/// Return the secret, or `$crypto_errno.verification_failed` on error.
+pub unsafe fn kx_decapsulate(
+    sk: Secretkey,
+    encapsulated_secret: *const u8,
+    encapsulated_secret_len: Size,
+) -> Result<ArrayOutput> {
+    let mut secret = MaybeUninit::uninit();
+    let rc = wasi_ephemeral_crypto_kx::kx_decapsulate(
+        sk,
+        encapsulated_secret,
+        encapsulated_secret_len,
+        secret.as_mut_ptr(),
+    );
+    if let Some(err) = Error::from_raw_error(rc) {
+        Err(err)
+    } else {
+        Ok(secret.assume_init())
+    }
+}
+
+pub mod wasi_ephemeral_crypto_kx {
+    use super::*;
+    #[link(wasm_import_module = "wasi_ephemeral_crypto_kx")]
+    extern "C" {
+        /// Perform a simple Diffie-Hellman key exchange.
+        ///
+        /// Both keys must be of the same type, or else the `$crypto_errno.incompatible_keys` error is returned.
+        /// The algorithm also has to support this kind of key exchange. If this is not the case, the `$crypto_errno.invalid_operation` error is returned.
+        ///
+        /// Otherwide, a raw shared key is returned, and can be imported as a symmetric key.
+        /// ```
+        pub fn kx_dh(pk: Publickey, sk: Secretkey, shared_secret: *mut ArrayOutput) -> CryptoErrno;
+        /// Create a shared secret and encrypt it for the given public key.
+        ///
+        /// This operation is only compatible with specific algorithms.
+        /// If a selected algorithm doesn't support it, `$crypto_errno.invalid_operation` is returned.
+        ///
+        /// On success, both the shared secret and its encrypted version are returned.
+        pub fn kx_encapsulate(
+            pk: Publickey,
+            secret: *mut ArrayOutput,
+            encapsulated_secret: *mut ArrayOutput,
+        ) -> CryptoErrno;
+        /// Decapsulate an encapsulated secret crated with `kx_encapsulate`
+        ///
+        /// Return the secret, or `$crypto_errno.verification_failed` on error.
+        pub fn kx_decapsulate(
+            sk: Secretkey,
+            encapsulated_secret: *const u8,
+            encapsulated_secret_len: Size,
+            secret: *mut ArrayOutput,
+        ) -> CryptoErrno;
     }
 }
