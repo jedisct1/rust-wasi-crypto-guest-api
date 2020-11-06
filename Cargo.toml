@@ -6,4 +6,4 @@ edition = "2018"
 
 [dependencies]
 num_enum = "0.5"
-wiggle = "0.20"
+wiggle = "0.21"
