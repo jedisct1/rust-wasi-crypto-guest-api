@@ -92,7 +92,10 @@ impl SymmetricState {
 
     pub fn decrypt(&mut self, ciphertext: impl AsRef<[u8]>) -> Result<Vec<u8>, Error> {
         let ciphertext = ciphertext.as_ref();
-        let max_out_len = ciphertext.len();
+        let max_out_len = ciphertext
+            .len()
+            .checked_sub(self.max_tag_len()?)
+            .ok_or(Error::InvalidTag)?;
         let mut out = vec![0u8; max_out_len];
         let out_len = unsafe {
             raw::symmetric_state_decrypt(
