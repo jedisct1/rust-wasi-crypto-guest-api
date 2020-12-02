@@ -98,8 +98,8 @@ pub const CRYPTO_ERRNO_NONCE_REQUIRED: CryptoErrno = 23;
 pub const CRYPTO_ERRNO_OPTION_NOT_SET: CryptoErrno = 24;
 /// A key or key pair matching the requested identifier cannot be found using the supplied information.
 ///
-/// This error is returned by a key manager via the `keypair_from_id()` function.
-pub const CRYPTO_ERRNO_KEY_NOT_FOUND: CryptoErrno = 25;
+/// This error is returned by a secrets manager via the `keypair_from_id()` function.
+pub const CRYPTO_ERRNO_NOT_FOUND: CryptoErrno = 25;
 /// The algorithm requires parameters that haven't been set.
 ///
 /// Non-generic options are required and must be given by building an `options` set and giving that object to functions instantiating that algorithm.
@@ -114,39 +114,43 @@ pub const CRYPTO_ERRNO_IN_PROGRESS: CryptoErrno = 27;
 ///
 /// This error is returned when trying to build a key pair from a public key and a secret key that were created for different and incompatible algorithms.
 pub const CRYPTO_ERRNO_INCOMPATIBLE_KEYS: CryptoErrno = 28;
-/// A managed key expired and cannot be used any more.
-pub const CRYPTO_ERRNO_EXPIRED_KEY: CryptoErrno = 29;
+/// A managed key or secret expired and cannot be used any more.
+pub const CRYPTO_ERRNO_EXPIRED: CryptoErrno = 29;
 pub type KeypairEncoding = u16;
 /// Raw bytes.
 pub const KEYPAIR_ENCODING_RAW: KeypairEncoding = 0;
-/// PCSK8 encoding.
+/// PCSK8/DER encoding.
 pub const KEYPAIR_ENCODING_PKCS8: KeypairEncoding = 1;
-/// DER encoding.
-pub const KEYPAIR_ENCODING_DER: KeypairEncoding = 2;
 /// PEM encoding.
-pub const KEYPAIR_ENCODING_PEM: KeypairEncoding = 3;
+pub const KEYPAIR_ENCODING_PEM: KeypairEncoding = 2;
+/// Implementation-defined encoding.
+pub const KEYPAIR_ENCODING_LOCAL: KeypairEncoding = 3;
 pub type PublickeyEncoding = u16;
 /// Raw bytes.
 pub const PUBLICKEY_ENCODING_RAW: PublickeyEncoding = 0;
-/// DER encoding.
-pub const PUBLICKEY_ENCODING_DER: PublickeyEncoding = 1;
+/// PKCS8/DER encoding.
+pub const PUBLICKEY_ENCODING_PKCS8: PublickeyEncoding = 1;
 /// PEM encoding.
 pub const PUBLICKEY_ENCODING_PEM: PublickeyEncoding = 2;
 /// SEC encoding.
 pub const PUBLICKEY_ENCODING_SEC: PublickeyEncoding = 3;
 /// Compressed SEC encoding.
 pub const PUBLICKEY_ENCODING_COMPRESSED_SEC: PublickeyEncoding = 4;
+/// Implementation-defined encoding.
+pub const PUBLICKEY_ENCODING_LOCAL: PublickeyEncoding = 5;
 pub type SecretkeyEncoding = u16;
 /// Raw bytes.
 pub const SECRETKEY_ENCODING_RAW: SecretkeyEncoding = 0;
-/// DER encoding.
-pub const SECRETKEY_ENCODING_DER: SecretkeyEncoding = 1;
+/// PKCS8/DER encoding.
+pub const SECRETKEY_ENCODING_PKCS8: SecretkeyEncoding = 1;
 /// PEM encoding.
 pub const SECRETKEY_ENCODING_PEM: SecretkeyEncoding = 2;
 /// SEC encoding.
 pub const SECRETKEY_ENCODING_SEC: SecretkeyEncoding = 3;
 /// Compressed SEC encoding.
 pub const SECRETKEY_ENCODING_COMPRESSED_SEC: SecretkeyEncoding = 4;
+/// Implementation-defined encoding.
+pub const SECRETKEY_ENCODING_LOCAL: SecretkeyEncoding = 5;
 pub type SignatureEncoding = u16;
 /// Raw bytes.
 pub const SIGNATURE_ENCODING_RAW: SignatureEncoding = 0;
@@ -164,9 +168,10 @@ pub const VERSION_LATEST: Version = 18374686479671623681;
 /// Perform an operation over all versions of a key.
 pub const VERSION_ALL: Version = 18374686479671623682;
 pub type Size = usize;
+pub type Timestamp = u64;
 pub type ArrayOutput = u32;
 pub type Options = u32;
-pub type KeyManager = u32;
+pub type SecretsManager = u32;
 pub type Keypair = u32;
 pub type SignatureState = u32;
 pub type Signature = u32;
@@ -179,7 +184,6 @@ pub type SymmetricTag = u32;
 pub type OptOptionsU = u8;
 pub const OPT_OPTIONS_U_SOME: OptOptionsU = 0;
 pub const OPT_OPTIONS_U_NONE: OptOptionsU = 1;
-
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub union OptOptionsUnion {
@@ -250,7 +254,7 @@ pub unsafe fn options_close(handle: Options) -> Result<()> {
 
 /// Set or update an option.
 ///
-/// This is used to set algorithm-specific parameters, but also to provide credentials for the key management facilities, if required.
+/// This is used to set algorithm-specific parameters, but also to provide credentials for the secrets management facilities, if required.
 ///
 /// This function may return `unsupported_option` if an option that doesn't exist for any implemented algorithms is specified.
 pub unsafe fn options_set(
@@ -361,15 +365,15 @@ pub unsafe fn array_output_pull(
 }
 
 /// __(optional)__
-/// Create a context to use a key manager.
+/// Create a context to use a secrets manager.
 ///
 /// The set of required and supported options is defined by the host.
 ///
-/// The function returns the `unsupported_feature` error code if key management facilities are not supported by the host.
+/// The function returns the `unsupported_feature` error code if secrets management facilities are not supported by the host.
 /// This is also an optional import, meaning that the function may not even exist.
-pub unsafe fn key_manager_open(options: &OptOptions) -> Result<KeyManager> {
+pub unsafe fn secrets_manager_open(options: &OptOptions) -> Result<SecretsManager> {
     let mut handle = MaybeUninit::uninit();
-    let rc = wasi_ephemeral_crypto_common::key_manager_open(options, handle.as_mut_ptr());
+    let rc = wasi_ephemeral_crypto_common::secrets_manager_open(options, handle.as_mut_ptr());
     if let Some(err) = Error::from_raw_error(rc) {
         Err(err)
     } else {
@@ -378,12 +382,12 @@ pub unsafe fn key_manager_open(options: &OptOptions) -> Result<KeyManager> {
 }
 
 /// __(optional)__
-/// Destroy a key manager context.
+/// Destroy a secrets manager context.
 ///
-/// The function returns the `unsupported_feature` error code if key management facilities are not supported by the host.
+/// The function returns the `unsupported_feature` error code if secrets management facilities are not supported by the host.
 /// This is also an optional import, meaning that the function may not even exist.
-pub unsafe fn key_manager_close(key_manager: KeyManager) -> Result<()> {
-    let rc = wasi_ephemeral_crypto_common::key_manager_close(key_manager);
+pub unsafe fn secrets_manager_close(secrets_manager: SecretsManager) -> Result<()> {
+    let rc = wasi_ephemeral_crypto_common::secrets_manager_close(secrets_manager);
     if let Some(err) = Error::from_raw_error(rc) {
         Err(err)
     } else {
@@ -394,21 +398,21 @@ pub unsafe fn key_manager_close(key_manager: KeyManager) -> Result<()> {
 /// __(optional)__
 /// Invalidate a managed key or key pair given an identifier and a version.
 ///
-/// This asks the key manager to delete or revoke a stored key, a specific version of a key..
+/// This asks the secrets manager to delete or revoke a stored key, a specific version of a key.
 ///
 /// `key_version` can be set to a version number, to `version.latest` to invalidate the current version, or to `version.all` to invalidate all versions of a key.
 ///
-/// The function returns `unsupported_feature` if this operation is not supported by the host, and `key_not_found` if the identifier and version don't match any existing key.
+/// The function returns `unsupported_feature` if this operation is not supported by the host, and `not_found` if the identifier and version don't match any existing key.
 ///
 /// This is an optional import, meaning that the function may not even exist.
-pub unsafe fn key_manager_invalidate(
-    key_manager: KeyManager,
+pub unsafe fn secrets_manager_invalidate(
+    secrets_manager: SecretsManager,
     key_id: *const u8,
     key_id_len: Size,
     key_version: Version,
 ) -> Result<()> {
-    let rc = wasi_ephemeral_crypto_common::key_manager_invalidate(
-        key_manager,
+    let rc = wasi_ephemeral_crypto_common::secrets_manager_invalidate(
+        secrets_manager,
         key_id,
         key_id_len,
         key_version,
@@ -442,7 +446,7 @@ pub mod wasi_ephemeral_crypto_common {
         pub fn options_close(handle: Options) -> CryptoErrno;
         /// Set or update an option.
         ///
-        /// This is used to set algorithm-specific parameters, but also to provide credentials for the key management facilities, if required.
+        /// This is used to set algorithm-specific parameters, but also to provide credentials for the secrets management facilities, if required.
         ///
         /// This function may return `unsupported_option` if an option that doesn't exist for any implemented algorithms is specified.
         pub fn options_set(
@@ -501,32 +505,34 @@ pub mod wasi_ephemeral_crypto_common {
             len: *mut Size,
         ) -> CryptoErrno;
         /// __(optional)__
-        /// Create a context to use a key manager.
+        /// Create a context to use a secrets manager.
         ///
         /// The set of required and supported options is defined by the host.
         ///
-        /// The function returns the `unsupported_feature` error code if key management facilities are not supported by the host.
+        /// The function returns the `unsupported_feature` error code if secrets management facilities are not supported by the host.
         /// This is also an optional import, meaning that the function may not even exist.
-        pub fn key_manager_open(options: *const OptOptions, handle: *mut KeyManager)
-            -> CryptoErrno;
+        pub fn secrets_manager_open(
+            options: *const OptOptions,
+            handle: *mut SecretsManager,
+        ) -> CryptoErrno;
         /// __(optional)__
-        /// Destroy a key manager context.
+        /// Destroy a secrets manager context.
         ///
-        /// The function returns the `unsupported_feature` error code if key management facilities are not supported by the host.
+        /// The function returns the `unsupported_feature` error code if secrets management facilities are not supported by the host.
         /// This is also an optional import, meaning that the function may not even exist.
-        pub fn key_manager_close(key_manager: KeyManager) -> CryptoErrno;
+        pub fn secrets_manager_close(secrets_manager: SecretsManager) -> CryptoErrno;
         /// __(optional)__
         /// Invalidate a managed key or key pair given an identifier and a version.
         ///
-        /// This asks the key manager to delete or revoke a stored key, a specific version of a key..
+        /// This asks the secrets manager to delete or revoke a stored key, a specific version of a key.
         ///
         /// `key_version` can be set to a version number, to `version.latest` to invalidate the current version, or to `version.all` to invalidate all versions of a key.
         ///
-        /// The function returns `unsupported_feature` if this operation is not supported by the host, and `key_not_found` if the identifier and version don't match any existing key.
+        /// The function returns `unsupported_feature` if this operation is not supported by the host, and `not_found` if the identifier and version don't match any existing key.
         ///
         /// This is an optional import, meaning that the function may not even exist.
-        pub fn key_manager_invalidate(
-            key_manager: KeyManager,
+        pub fn secrets_manager_invalidate(
+            secrets_manager: SecretsManager,
             key_id: *const u8,
             key_id_len: Size,
             key_version: Version,
@@ -549,7 +555,7 @@ pub mod wasi_ephemeral_crypto_common {
 /// Example usage:
 ///
 /// ```rust
-/// let kp_handle = ctx.keypair_generate(AlgorithmType::Signatures, "RSA_PKCS1_2048_8192_SHA512", None)?;
+/// let kp_handle = ctx.keypair_generate(AlgorithmType::Signatures, "RSA_PKCS1_2048_SHA256", None)?;
 /// ```
 pub unsafe fn keypair_generate(
     algorithm_type: AlgorithmType,
@@ -582,7 +588,7 @@ pub unsafe fn keypair_generate(
 /// Example usage:
 ///
 /// ```rust
-/// let kp_handle = ctx.keypair_import(AlgorithmType::Signatures, "RSA_PKCS1_2048_8192_SHA512", KeypairEncoding::PKCS8)?;
+/// let kp_handle = ctx.keypair_import(AlgorithmType::Signatures, "RSA_PKCS1_2048_SHA256", KeypairEncoding::PKCS8)?;
 /// ```
 pub unsafe fn keypair_import(
     algorithm_type: AlgorithmType,
@@ -611,25 +617,25 @@ pub unsafe fn keypair_import(
 /// __(optional)__
 /// Generate a new managed key pair.
 ///
-/// The key pair is generated and stored by the key management facilities.
+/// The key pair is generated and stored by the secrets management facilities.
 ///
 /// It may be used through its identifier, but the host may not allow it to be exported.
 ///
-/// The function returns the `unsupported_feature` error code if key management facilities are not supported by the host,
+/// The function returns the `unsupported_feature` error code if secrets management facilities are not supported by the host,
 /// or `unsupported_algorithm` if a key cannot be created for the chosen algorithm.
 ///
 /// The function may also return `unsupported_algorithm` if the algorithm is not supported by the host.
 ///
 /// This is also an optional import, meaning that the function may not even exist.
 pub unsafe fn keypair_generate_managed(
-    key_manager: KeyManager,
+    secrets_manager: SecretsManager,
     algorithm_type: AlgorithmType,
     algorithm: &str,
     options: &OptOptions,
 ) -> Result<Keypair> {
     let mut handle = MaybeUninit::uninit();
     let rc = wasi_ephemeral_crypto_asymmetric_common::keypair_generate_managed(
-        key_manager,
+        secrets_manager,
         algorithm_type,
         algorithm.as_ptr(),
         algorithm.len(),
@@ -640,6 +646,32 @@ pub unsafe fn keypair_generate_managed(
         Err(err)
     } else {
         Ok(handle.assume_init())
+    }
+}
+
+/// __(optional)__
+/// Store a key pair into the secrets manager.
+///
+/// On success, the function stores the key pair identifier into `$kp_id`,
+/// into which up to `$kp_id_max_len` can be written.
+///
+/// The function returns `overflow` if the supplied buffer is too small.
+pub unsafe fn keypair_store_managed(
+    secrets_manager: SecretsManager,
+    kp: Keypair,
+    kp_id: *mut u8,
+    kp_id_max_len: Size,
+) -> Result<()> {
+    let rc = wasi_ephemeral_crypto_asymmetric_common::keypair_store_managed(
+        secrets_manager,
+        kp,
+        kp_id,
+        kp_id_max_len,
+    );
+    if let Some(err) = Error::from_raw_error(rc) {
+        Err(err)
+    } else {
+        Ok(())
     }
 }
 
@@ -656,22 +688,22 @@ pub unsafe fn keypair_generate_managed(
 ///
 /// Both keys must share the same algorithm and have compatible parameters. If this is not the case, `incompatible_keys` is returned.
 ///
-/// The function may also return the `unsupported_feature` error code if key management facilities are not supported by the host,
+/// The function may also return the `unsupported_feature` error code if secrets management facilities are not supported by the host,
 /// or if keys cannot be rotated.
 ///
-/// Finally, `prohibited_operation` can be returned if `$kp_new` wasn't created by the key manager, and the key manager prohibits imported keys.
+/// Finally, `prohibited_operation` can be returned if `$kp_new` wasn't created by the secrets manager, and the secrets manager prohibits imported keys.
 ///
 /// If the operation succeeded, the new version is returned.
 ///
 /// This is an optional import, meaning that the function may not even exist.
 pub unsafe fn keypair_replace_managed(
-    key_manager: KeyManager,
+    secrets_manager: SecretsManager,
     kp_old: Keypair,
     kp_new: Keypair,
 ) -> Result<Version> {
     let mut version = MaybeUninit::uninit();
     let rc = wasi_ephemeral_crypto_asymmetric_common::keypair_replace_managed(
-        key_manager,
+        secrets_manager,
         kp_old,
         kp_new,
         version.as_mut_ptr(),
@@ -715,19 +747,19 @@ pub unsafe fn keypair_id(
 ///
 /// `kp_version` can be set to `version_latest` to retrieve the most recent version of a key pair.
 ///
-/// If no key pair matching the provided information is found, `key_not_found` is returned instead.
+/// If no key pair matching the provided information is found, `not_found` is returned instead.
 ///
 /// This is an optional import, meaning that the function may not even exist.
 /// ```
 pub unsafe fn keypair_from_id(
-    key_manager: KeyManager,
+    secrets_manager: SecretsManager,
     kp_id: *const u8,
     kp_id_len: Size,
     kp_version: Version,
 ) -> Result<Keypair> {
     let mut handle = MaybeUninit::uninit();
     let rc = wasi_ephemeral_crypto_asymmetric_common::keypair_from_id(
-        key_manager,
+        secrets_manager,
         kp_id,
         kp_id_len,
         kp_version,
@@ -985,7 +1017,7 @@ pub mod wasi_ephemeral_crypto_asymmetric_common {
         /// Example usage:
         ///
         /// ```rust
-        /// let kp_handle = ctx.keypair_generate(AlgorithmType::Signatures, "RSA_PKCS1_2048_8192_SHA512", None)?;
+        /// let kp_handle = ctx.keypair_generate(AlgorithmType::Signatures, "RSA_PKCS1_2048_SHA256", None)?;
         /// ```
         pub fn keypair_generate(
             algorithm_type: AlgorithmType,
@@ -1005,7 +1037,7 @@ pub mod wasi_ephemeral_crypto_asymmetric_common {
         /// Example usage:
         ///
         /// ```rust
-        /// let kp_handle = ctx.keypair_import(AlgorithmType::Signatures, "RSA_PKCS1_2048_8192_SHA512", KeypairEncoding::PKCS8)?;
+        /// let kp_handle = ctx.keypair_import(AlgorithmType::Signatures, "RSA_PKCS1_2048_SHA256", KeypairEncoding::PKCS8)?;
         /// ```
         pub fn keypair_import(
             algorithm_type: AlgorithmType,
@@ -1019,23 +1051,36 @@ pub mod wasi_ephemeral_crypto_asymmetric_common {
         /// __(optional)__
         /// Generate a new managed key pair.
         ///
-        /// The key pair is generated and stored by the key management facilities.
+        /// The key pair is generated and stored by the secrets management facilities.
         ///
         /// It may be used through its identifier, but the host may not allow it to be exported.
         ///
-        /// The function returns the `unsupported_feature` error code if key management facilities are not supported by the host,
+        /// The function returns the `unsupported_feature` error code if secrets management facilities are not supported by the host,
         /// or `unsupported_algorithm` if a key cannot be created for the chosen algorithm.
         ///
         /// The function may also return `unsupported_algorithm` if the algorithm is not supported by the host.
         ///
         /// This is also an optional import, meaning that the function may not even exist.
         pub fn keypair_generate_managed(
-            key_manager: KeyManager,
+            secrets_manager: SecretsManager,
             algorithm_type: AlgorithmType,
             algorithm_ptr: *const u8,
             algorithm_len: usize,
             options: *const OptOptions,
             handle: *mut Keypair,
+        ) -> CryptoErrno;
+        /// __(optional)__
+        /// Store a key pair into the secrets manager.
+        ///
+        /// On success, the function stores the key pair identifier into `$kp_id`,
+        /// into which up to `$kp_id_max_len` can be written.
+        ///
+        /// The function returns `overflow` if the supplied buffer is too small.
+        pub fn keypair_store_managed(
+            secrets_manager: SecretsManager,
+            kp: Keypair,
+            kp_id: *mut u8,
+            kp_id_max_len: Size,
         ) -> CryptoErrno;
         /// __(optional)__
         /// Replace a managed key pair.
@@ -1050,16 +1095,16 @@ pub mod wasi_ephemeral_crypto_asymmetric_common {
         ///
         /// Both keys must share the same algorithm and have compatible parameters. If this is not the case, `incompatible_keys` is returned.
         ///
-        /// The function may also return the `unsupported_feature` error code if key management facilities are not supported by the host,
+        /// The function may also return the `unsupported_feature` error code if secrets management facilities are not supported by the host,
         /// or if keys cannot be rotated.
         ///
-        /// Finally, `prohibited_operation` can be returned if `$kp_new` wasn't created by the key manager, and the key manager prohibits imported keys.
+        /// Finally, `prohibited_operation` can be returned if `$kp_new` wasn't created by the secrets manager, and the secrets manager prohibits imported keys.
         ///
         /// If the operation succeeded, the new version is returned.
         ///
         /// This is an optional import, meaning that the function may not even exist.
         pub fn keypair_replace_managed(
-            key_manager: KeyManager,
+            secrets_manager: SecretsManager,
             kp_old: Keypair,
             kp_new: Keypair,
             version: *mut Version,
@@ -1082,12 +1127,12 @@ pub mod wasi_ephemeral_crypto_asymmetric_common {
         ///
         /// `kp_version` can be set to `version_latest` to retrieve the most recent version of a key pair.
         ///
-        /// If no key pair matching the provided information is found, `key_not_found` is returned instead.
+        /// If no key pair matching the provided information is found, `not_found` is returned instead.
         ///
         /// This is an optional import, meaning that the function may not even exist.
         /// ```
         pub fn keypair_from_id(
-            key_manager: KeyManager,
+            secrets_manager: SecretsManager,
             kp_id: *const u8,
             kp_id_len: Size,
             kp_version: Version,
@@ -1615,24 +1660,24 @@ pub unsafe fn symmetric_key_close(symmetric_key: SymmetricKey) -> Result<()> {
 /// __(optional)__
 /// Generate a new managed symmetric key.
 ///
-/// The key is generated and stored by the key management facilities.
+/// The key is generated and stored by the secrets management facilities.
 ///
 /// It may be used through its identifier, but the host may not allow it to be exported.
 ///
-/// The function returns the `unsupported_feature` error code if key management facilities are not supported by the host,
+/// The function returns the `unsupported_feature` error code if secrets management facilities are not supported by the host,
 /// or `unsupported_algorithm` if a key cannot be created for the chosen algorithm.
 ///
 /// The function may also return `unsupported_algorithm` if the algorithm is not supported by the host.
 ///
 /// This is also an optional import, meaning that the function may not even exist.
 pub unsafe fn symmetric_key_generate_managed(
-    key_manager: KeyManager,
+    secrets_manager: SecretsManager,
     algorithm: &str,
     options: &OptOptions,
 ) -> Result<SymmetricKey> {
     let mut handle = MaybeUninit::uninit();
     let rc = wasi_ephemeral_crypto_symmetric::symmetric_key_generate_managed(
-        key_manager,
+        secrets_manager,
         algorithm.as_ptr(),
         algorithm.len(),
         options,
@@ -1642,6 +1687,32 @@ pub unsafe fn symmetric_key_generate_managed(
         Err(err)
     } else {
         Ok(handle.assume_init())
+    }
+}
+
+/// __(optional)__
+/// Store a symmetric key into the secrets manager.
+///
+/// On success, the function stores the key identifier into `$symmetric_key_id`,
+/// into which up to `$symmetric_key_id_max_len` can be written.
+///
+/// The function returns `overflow` if the supplied buffer is too small.
+pub unsafe fn symmetric_key_store_managed(
+    secrets_manager: SecretsManager,
+    symmetric_key: SymmetricKey,
+    symmetric_key_id: *mut u8,
+    symmetric_key_id_max_len: Size,
+) -> Result<()> {
+    let rc = wasi_ephemeral_crypto_symmetric::symmetric_key_store_managed(
+        secrets_manager,
+        symmetric_key,
+        symmetric_key_id,
+        symmetric_key_id_max_len,
+    );
+    if let Some(err) = Error::from_raw_error(rc) {
+        Err(err)
+    } else {
+        Ok(())
     }
 }
 
@@ -1658,22 +1729,22 @@ pub unsafe fn symmetric_key_generate_managed(
 ///
 /// Both keys must share the same algorithm and have compatible parameters. If this is not the case, `incompatible_keys` is returned.
 ///
-/// The function may also return the `unsupported_feature` error code if key management facilities are not supported by the host,
+/// The function may also return the `unsupported_feature` error code if secrets management facilities are not supported by the host,
 /// or if keys cannot be rotated.
 ///
-/// Finally, `prohibited_operation` can be returned if `$symmetric_key_new` wasn't created by the key manager, and the key manager prohibits imported keys.
+/// Finally, `prohibited_operation` can be returned if `$symmetric_key_new` wasn't created by the secrets manager, and the secrets manager prohibits imported keys.
 ///
 /// If the operation succeeded, the new version is returned.
 ///
 /// This is an optional import, meaning that the function may not even exist.
 pub unsafe fn symmetric_key_replace_managed(
-    key_manager: KeyManager,
+    secrets_manager: SecretsManager,
     symmetric_key_old: SymmetricKey,
     symmetric_key_new: SymmetricKey,
 ) -> Result<Version> {
     let mut version = MaybeUninit::uninit();
     let rc = wasi_ephemeral_crypto_symmetric::symmetric_key_replace_managed(
-        key_manager,
+        secrets_manager,
         symmetric_key_old,
         symmetric_key_new,
         version.as_mut_ptr(),
@@ -1717,18 +1788,18 @@ pub unsafe fn symmetric_key_id(
 ///
 /// `kp_version` can be set to `version_latest` to retrieve the most recent version of a symmetric key.
 ///
-/// If no key matching the provided information is found, `key_not_found` is returned instead.
+/// If no key matching the provided information is found, `not_found` is returned instead.
 ///
 /// This is an optional import, meaning that the function may not even exist.
 pub unsafe fn symmetric_key_from_id(
-    key_manager: KeyManager,
+    secrets_manager: SecretsManager,
     symmetric_key_id: *const u8,
     symmetric_key_id_len: Size,
     symmetric_key_version: Version,
 ) -> Result<SymmetricKey> {
     let mut handle = MaybeUninit::uninit();
     let rc = wasi_ephemeral_crypto_symmetric::symmetric_key_from_id(
-        key_manager,
+        secrets_manager,
         symmetric_key_id,
         symmetric_key_id_len,
         symmetric_key_version,
@@ -1905,8 +1976,8 @@ pub unsafe fn symmetric_key_from_id(
 /// let mut out = [0u8; 16];
 /// let mut out2 = [0u8; 16];
 /// let mut ciphertext = [0u8; 20];
-/// let key_handle = ctx.symmetric_key_generate("Xoodyak-256", None)?;
-/// let state_handle = ctx.symmetric_state_open("Xoodyak-256", Some(key_handle), None)?;
+/// let key_handle = ctx.symmetric_key_generate("Xoodyak-128", None)?;
+/// let state_handle = ctx.symmetric_state_open("Xoodyak-128", Some(key_handle), None)?;
 /// ctx.symmetric_state_absorb(state_handle, b"data")?;
 /// ctx.symmetric_state_encrypt(state_handle, &mut ciphertext, b"abcd")?;
 /// ctx.symmetric_state_absorb(state_handle, b"more data")?;
@@ -1914,7 +1985,7 @@ pub unsafe fn symmetric_key_from_id(
 /// ctx.symmetric_state_squeeze(state_handle, &mut out2)?;
 /// ctx.symmetric_state_ratchet(state_handle)?;
 /// ctx.symmetric_state_absorb(state_handle, b"more data")?;
-/// let next_key_handle = ctx.symmetric_state_squeeze_key(state_handle, "Xoodyak-256")?;
+/// let next_key_handle = ctx.symmetric_state_squeeze_key(state_handle, "Xoodyak-128")?;
 /// // ...
 /// ```
 pub unsafe fn symmetric_state_open(
@@ -2407,22 +2478,35 @@ pub mod wasi_ephemeral_crypto_symmetric {
         /// __(optional)__
         /// Generate a new managed symmetric key.
         ///
-        /// The key is generated and stored by the key management facilities.
+        /// The key is generated and stored by the secrets management facilities.
         ///
         /// It may be used through its identifier, but the host may not allow it to be exported.
         ///
-        /// The function returns the `unsupported_feature` error code if key management facilities are not supported by the host,
+        /// The function returns the `unsupported_feature` error code if secrets management facilities are not supported by the host,
         /// or `unsupported_algorithm` if a key cannot be created for the chosen algorithm.
         ///
         /// The function may also return `unsupported_algorithm` if the algorithm is not supported by the host.
         ///
         /// This is also an optional import, meaning that the function may not even exist.
         pub fn symmetric_key_generate_managed(
-            key_manager: KeyManager,
+            secrets_manager: SecretsManager,
             algorithm_ptr: *const u8,
             algorithm_len: usize,
             options: *const OptOptions,
             handle: *mut SymmetricKey,
+        ) -> CryptoErrno;
+        /// __(optional)__
+        /// Store a symmetric key into the secrets manager.
+        ///
+        /// On success, the function stores the key identifier into `$symmetric_key_id`,
+        /// into which up to `$symmetric_key_id_max_len` can be written.
+        ///
+        /// The function returns `overflow` if the supplied buffer is too small.
+        pub fn symmetric_key_store_managed(
+            secrets_manager: SecretsManager,
+            symmetric_key: SymmetricKey,
+            symmetric_key_id: *mut u8,
+            symmetric_key_id_max_len: Size,
         ) -> CryptoErrno;
         /// __(optional)__
         /// Replace a managed symmetric key.
@@ -2437,16 +2521,16 @@ pub mod wasi_ephemeral_crypto_symmetric {
         ///
         /// Both keys must share the same algorithm and have compatible parameters. If this is not the case, `incompatible_keys` is returned.
         ///
-        /// The function may also return the `unsupported_feature` error code if key management facilities are not supported by the host,
+        /// The function may also return the `unsupported_feature` error code if secrets management facilities are not supported by the host,
         /// or if keys cannot be rotated.
         ///
-        /// Finally, `prohibited_operation` can be returned if `$symmetric_key_new` wasn't created by the key manager, and the key manager prohibits imported keys.
+        /// Finally, `prohibited_operation` can be returned if `$symmetric_key_new` wasn't created by the secrets manager, and the secrets manager prohibits imported keys.
         ///
         /// If the operation succeeded, the new version is returned.
         ///
         /// This is an optional import, meaning that the function may not even exist.
         pub fn symmetric_key_replace_managed(
-            key_manager: KeyManager,
+            secrets_manager: SecretsManager,
             symmetric_key_old: SymmetricKey,
             symmetric_key_new: SymmetricKey,
             version: *mut Version,
@@ -2469,11 +2553,11 @@ pub mod wasi_ephemeral_crypto_symmetric {
         ///
         /// `kp_version` can be set to `version_latest` to retrieve the most recent version of a symmetric key.
         ///
-        /// If no key matching the provided information is found, `key_not_found` is returned instead.
+        /// If no key matching the provided information is found, `not_found` is returned instead.
         ///
         /// This is an optional import, meaning that the function may not even exist.
         pub fn symmetric_key_from_id(
-            key_manager: KeyManager,
+            secrets_manager: SecretsManager,
             symmetric_key_id: *const u8,
             symmetric_key_id_len: Size,
             symmetric_key_version: Version,
@@ -2643,8 +2727,8 @@ pub mod wasi_ephemeral_crypto_symmetric {
         /// let mut out = [0u8; 16];
         /// let mut out2 = [0u8; 16];
         /// let mut ciphertext = [0u8; 20];
-        /// let key_handle = ctx.symmetric_key_generate("Xoodyak-256", None)?;
-        /// let state_handle = ctx.symmetric_state_open("Xoodyak-256", Some(key_handle), None)?;
+        /// let key_handle = ctx.symmetric_key_generate("Xoodyak-128", None)?;
+        /// let state_handle = ctx.symmetric_state_open("Xoodyak-128", Some(key_handle), None)?;
         /// ctx.symmetric_state_absorb(state_handle, b"data")?;
         /// ctx.symmetric_state_encrypt(state_handle, &mut ciphertext, b"abcd")?;
         /// ctx.symmetric_state_absorb(state_handle, b"more data")?;
@@ -2652,7 +2736,7 @@ pub mod wasi_ephemeral_crypto_symmetric {
         /// ctx.symmetric_state_squeeze(state_handle, &mut out2)?;
         /// ctx.symmetric_state_ratchet(state_handle)?;
         /// ctx.symmetric_state_absorb(state_handle, b"more data")?;
-        /// let next_key_handle = ctx.symmetric_state_squeeze_key(state_handle, "Xoodyak-256")?;
+        /// let next_key_handle = ctx.symmetric_state_squeeze_key(state_handle, "Xoodyak-128")?;
         /// // ...
         /// ```
         pub fn symmetric_state_open(

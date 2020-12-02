@@ -9,13 +9,10 @@ mod test {
         let key = SymmetricKey::generate("AES-128-GCM", Some(&options))?;
         let mut state = SymmetricState::new("AES-128-GCM", Some(&key), Some(&options))?;
         let ciphertext = state.encrypt(b"test")?;
-
         let mut state = SymmetricState::new("AES-128-GCM", Some(&key), Some(&options))?;
-        let pt = state.decrypt(&ciphertext)?;
-        dbg!(pt);
+        state.decrypt(&ciphertext)?;
 
         let key = SymmetricKey::generate("XOODYAK-128", None)?;
-
         let mut state = SymmetricState::new("XOODYAK-128", Some(&key), Some(&options))?;
         let _ = state.squeeze_tag()?;
         let mut ciphertext = vec![0u8; 4];
@@ -33,22 +30,19 @@ mod test {
 
         let mut state = SymmetricState::new("SHA-512/256", None, None)?;
         state.absorb(b"test")?;
-        let hash = state.squeeze(32)?;
+        state.squeeze(32)?;
 
-        dbg!(hash);
         Ok(())
     }
 
     #[test]
     fn test_signatures() -> Result<(), WasiCryptoError> {
-        let pk = SignaturePublicKey::from_raw("Ed25519", &[0; 32])?;
-        dbg!(pk);
+        let _ = SignaturePublicKey::from_raw("Ed25519", &[0; 32])?;
 
         let kp = SignatureKeyPair::generate("Ed25519")?;
         let signature = kp.sign("hello")?;
-        dbg!(signature.raw()?);
 
-        dbg!(kp.publickey()?.signature_verify("hello", &signature)?);
+        kp.publickey()?.signature_verify("hello", &signature)?;
 
         Ok(())
     }

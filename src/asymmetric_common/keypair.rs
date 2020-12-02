@@ -67,12 +67,12 @@ impl KeyPair {
         Self::decode_from(alg_type, alg, encoded, raw::KEYPAIR_ENCODING_PEM)
     }
 
-    pub fn from_der(
+    pub fn from_local(
         alg_type: raw::AlgorithmType,
         alg: &'static str,
         encoded: impl AsRef<[u8]>,
     ) -> Result<Self, Error> {
-        Self::decode_from(alg_type, alg, encoded, raw::KEYPAIR_ENCODING_DER)
+        Self::decode_from(alg_type, alg, encoded, raw::KEYPAIR_ENCODING_LOCAL)
     }
 
     fn encode_as(&self, encoding: raw::KeypairEncoding) -> Result<Vec<u8>, Error> {
@@ -88,11 +88,11 @@ impl KeyPair {
         self.encode_as(raw::KEYPAIR_ENCODING_PKCS8)
     }
 
-    pub fn der(&self) -> Result<Vec<u8>, Error> {
-        self.encode_as(raw::KEYPAIR_ENCODING_DER)
-    }
-
     pub fn pem(&self) -> Result<Vec<u8>, Error> {
         self.encode_as(raw::KEYPAIR_ENCODING_PEM)
+    }
+
+    pub fn local(&self) -> Result<Vec<u8>, Error> {
+        self.encode_as(raw::KEYPAIR_ENCODING_LOCAL)
     }
 }

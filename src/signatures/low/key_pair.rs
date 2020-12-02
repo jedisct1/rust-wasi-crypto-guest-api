@@ -43,8 +43,8 @@ impl SignatureKeyPair {
         )?))
     }
 
-    pub fn from_der(alg: &'static str, encoded: impl AsRef<[u8]>) -> Result<Self, Error> {
-        Ok(SignatureKeyPair(KeyPair::from_der(
+    pub fn from_local(alg: &'static str, encoded: impl AsRef<[u8]>) -> Result<Self, Error> {
+        Ok(SignatureKeyPair(KeyPair::from_local(
             raw::ALGORITHM_TYPE_SIGNATURES,
             alg,
             encoded,
@@ -59,12 +59,12 @@ impl SignatureKeyPair {
         self.0.pkcs8()
     }
 
-    pub fn der(&self) -> Result<Vec<u8>, Error> {
-        self.0.der()
-    }
-
     pub fn pem(&self) -> Result<Vec<u8>, Error> {
         self.0.pem()
+    }
+
+    pub fn local(&self) -> Result<Vec<u8>, Error> {
+        self.0.local()
     }
 
     pub fn multipart_signature(&self) -> Result<SignatureState, Error> {

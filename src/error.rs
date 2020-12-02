@@ -29,11 +29,11 @@ pub enum Error {
     InvalidOperation = raw::CRYPTO_ERRNO_INVALID_OPERATION,
     NonceRequired = raw::CRYPTO_ERRNO_NONCE_REQUIRED,
     OptionNotSet = raw::CRYPTO_ERRNO_OPTION_NOT_SET,
-    KeyNotFound = raw::CRYPTO_ERRNO_KEY_NOT_FOUND,
+    NotFound = raw::CRYPTO_ERRNO_NOT_FOUND,
     ParametersMissing = raw::CRYPTO_ERRNO_PARAMETERS_MISSING,
     InProgress = raw::CRYPTO_ERRNO_IN_PROGRESS,
     IncompatibleKeys = raw::CRYPTO_ERRNO_INCOMPATIBLE_KEYS,
-    ExpiredKey = raw::CRYPTO_ERRNO_EXPIRED_KEY,
+    Expired = raw::CRYPTO_ERRNO_EXPIRED,
 }
 
 impl Error {

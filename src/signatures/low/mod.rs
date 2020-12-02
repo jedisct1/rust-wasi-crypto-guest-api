@@ -47,10 +47,10 @@ impl Signature {
     }
 
     pub fn raw(&self) -> Result<Vec<u8>, Error> {
-        self.encode_as(raw::PUBLICKEY_ENCODING_RAW)
+        self.encode_as(raw::SIGNATURE_ENCODING_RAW)
     }
 
     pub fn der(&self) -> Result<Vec<u8>, Error> {
-        self.encode_as(raw::PUBLICKEY_ENCODING_DER)
+        self.encode_as(raw::SIGNATURE_ENCODING_DER)
     }
 }

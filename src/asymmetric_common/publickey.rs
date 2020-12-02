@@ -36,12 +36,12 @@ impl PublicKey {
         Self::decode_from(alg_type, alg, encoded, raw::PUBLICKEY_ENCODING_RAW)
     }
 
-    pub fn from_der(
+    pub fn from_pkcs8(
         alg_type: raw::AlgorithmType,
         alg: &'static str,
         encoded: impl AsRef<[u8]>,
     ) -> Result<Self, Error> {
-        Self::decode_from(alg_type, alg, encoded, raw::PUBLICKEY_ENCODING_DER)
+        Self::decode_from(alg_type, alg, encoded, raw::PUBLICKEY_ENCODING_PKCS8)
     }
 
     pub fn from_pem(
@@ -73,6 +73,14 @@ impl PublicKey {
         )
     }
 
+    pub fn from_local(
+        alg_type: raw::AlgorithmType,
+        alg: &'static str,
+        encoded: impl AsRef<[u8]>,
+    ) -> Result<Self, Error> {
+        Self::decode_from(alg_type, alg, encoded, raw::PUBLICKEY_ENCODING_LOCAL)
+    }
+
     fn encode_as(&self, encoding: raw::PublickeyEncoding) -> Result<Vec<u8>, Error> {
         let array_handle = unsafe { raw::publickey_export(self.handle, encoding) }?;
         ArrayOutput::new(array_handle).into_vec()
@@ -82,8 +90,8 @@ impl PublicKey {
         self.encode_as(raw::PUBLICKEY_ENCODING_RAW)
     }
 
-    pub fn der(&self) -> Result<Vec<u8>, Error> {
-        self.encode_as(raw::PUBLICKEY_ENCODING_DER)
+    pub fn pkcs8(&self) -> Result<Vec<u8>, Error> {
+        self.encode_as(raw::PUBLICKEY_ENCODING_PKCS8)
     }
 
     pub fn pem(&self) -> Result<Vec<u8>, Error> {
@@ -92,5 +100,9 @@ impl PublicKey {
 
     pub fn sec(&self) -> Result<Vec<u8>, Error> {
         self.encode_as(raw::PUBLICKEY_ENCODING_SEC)
+    }
+
+    pub fn local(&self) -> Result<Vec<u8>, Error> {
+        self.encode_as(raw::PUBLICKEY_ENCODING_LOCAL)
     }
 }

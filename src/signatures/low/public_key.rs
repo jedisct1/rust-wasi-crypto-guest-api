@@ -16,8 +16,8 @@ impl SignaturePublicKey {
         )?))
     }
 
-    pub fn from_der(alg: &'static str, encoded: impl AsRef<[u8]>) -> Result<Self, Error> {
-        Ok(SignaturePublicKey(PublicKey::from_der(
+    pub fn from_pkcs8(alg: &'static str, encoded: impl AsRef<[u8]>) -> Result<Self, Error> {
+        Ok(SignaturePublicKey(PublicKey::from_pkcs8(
             raw::ALGORITHM_TYPE_SIGNATURES,
             alg,
             encoded,
@@ -51,12 +51,20 @@ impl SignaturePublicKey {
         )?))
     }
 
+    pub fn from_local(alg: &'static str, encoded: impl AsRef<[u8]>) -> Result<Self, Error> {
+        Ok(SignaturePublicKey(PublicKey::from_local(
+            raw::ALGORITHM_TYPE_SIGNATURES,
+            alg,
+            encoded,
+        )?))
+    }
+
     pub fn raw(&self) -> Result<Vec<u8>, Error> {
         self.0.raw()
     }
 
-    pub fn der(&self) -> Result<Vec<u8>, Error> {
-        self.0.der()
+    pub fn pkcs8(&self) -> Result<Vec<u8>, Error> {
+        self.0.pkcs8()
     }
 
     pub fn pem(&self) -> Result<Vec<u8>, Error> {
@@ -65,6 +73,10 @@ impl SignaturePublicKey {
 
     pub fn sec(&self) -> Result<Vec<u8>, Error> {
         self.0.sec()
+    }
+
+    pub fn local(&self) -> Result<Vec<u8>, Error> {
+        self.0.local()
     }
 
     pub fn multipart_signature_verify(&self) -> Result<SignatureVerificationState, Error> {
