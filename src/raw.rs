@@ -91,31 +91,33 @@ pub const CRYPTO_ERRNO_INVALID_OPERATION: CryptoErrno = 22;
 /// In the absence of a nonce, the WASI cryptography module can automatically generate one, if that can be done safely. The nonce can be retrieved later with the `symmetric_state_option_get()` function using the `nonce` parameter.
 /// If automatically generating a nonce cannot be done safely, the module never falls back to an insecure option and requests an explicit nonce by throwing that error.
 pub const CRYPTO_ERRNO_NONCE_REQUIRED: CryptoErrno = 23;
+/// The provided nonce doesn't have a correct size for the given cipher.
+pub const CRYPTO_ERRNO_INVALID_NONCE: CryptoErrno = 24;
 /// The named option was not set.
 ///
 /// The caller tried to read the value of an option that was not set.
 /// This error is used to make the distinction between an empty option, and an option that was not set and left to its default value.
-pub const CRYPTO_ERRNO_OPTION_NOT_SET: CryptoErrno = 24;
+pub const CRYPTO_ERRNO_OPTION_NOT_SET: CryptoErrno = 25;
 /// A key or key pair matching the requested identifier cannot be found using the supplied information.
 ///
 /// This error is returned by a secrets manager via the `keypair_from_id()` function.
-pub const CRYPTO_ERRNO_NOT_FOUND: CryptoErrno = 25;
+pub const CRYPTO_ERRNO_NOT_FOUND: CryptoErrno = 26;
 /// The algorithm requires parameters that haven't been set.
 ///
 /// Non-generic options are required and must be given by building an `options` set and giving that object to functions instantiating that algorithm.
-pub const CRYPTO_ERRNO_PARAMETERS_MISSING: CryptoErrno = 26;
+pub const CRYPTO_ERRNO_PARAMETERS_MISSING: CryptoErrno = 27;
 /// A requested computation is not done yet, and additional calls to the function are required.
 ///
 /// Some functions, such as functions generating key pairs and password stretching functions, can take a long time to complete.
 ///
 /// In order to avoid a host call to be blocked for too long, these functions can return prematurely, requiring additional calls with the same parameters until they complete.
-pub const CRYPTO_ERRNO_IN_PROGRESS: CryptoErrno = 27;
+pub const CRYPTO_ERRNO_IN_PROGRESS: CryptoErrno = 28;
 /// Multiple keys have been provided, but they do not share the same type.
 ///
 /// This error is returned when trying to build a key pair from a public key and a secret key that were created for different and incompatible algorithms.
-pub const CRYPTO_ERRNO_INCOMPATIBLE_KEYS: CryptoErrno = 28;
+pub const CRYPTO_ERRNO_INCOMPATIBLE_KEYS: CryptoErrno = 29;
 /// A managed key or secret expired and cannot be used any more.
-pub const CRYPTO_ERRNO_EXPIRED: CryptoErrno = 29;
+pub const CRYPTO_ERRNO_EXPIRED: CryptoErrno = 30;
 pub type KeypairEncoding = u16;
 /// Raw bytes.
 pub const KEYPAIR_ENCODING_RAW: KeypairEncoding = 0;

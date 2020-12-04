@@ -28,6 +28,7 @@ pub enum Error {
     InvalidTag = raw::CRYPTO_ERRNO_INVALID_TAG,
     InvalidOperation = raw::CRYPTO_ERRNO_INVALID_OPERATION,
     NonceRequired = raw::CRYPTO_ERRNO_NONCE_REQUIRED,
+    InvalidNonce = raw::CRYPTO_ERRNO_INVALID_NONCE,
     OptionNotSet = raw::CRYPTO_ERRNO_OPTION_NOT_SET,
     NotFound = raw::CRYPTO_ERRNO_NOT_FOUND,
     ParametersMissing = raw::CRYPTO_ERRNO_PARAMETERS_MISSING,
